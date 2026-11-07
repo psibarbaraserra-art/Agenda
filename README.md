@@ -58,6 +58,8 @@ Os colaboradores precisam acessar o portal pela internet, então o app deve fica
   Configure um **disco persistente** e aponte a variável `DATA_DIR` para ele (ex.: `/data`), senão os dados se perdem a cada nova publicação.
 - **VPS própria** (ex.: Hostinger, DigitalOcean): `npm install && npm start` com `pm2`, atrás de HTTPS (Nginx/Caddy).
 
+**Só para visualizar (grátis):** no Render, crie um *Web Service* com o plano **Free**, comando de build `npm install`, comando de início `npm start` e a variável `DEMO=1`. O app abre com uma empresa de exemplo. No plano gratuito os dados são apagados quando o servidor reinicia, então use apenas para conhecer o app.
+
 Variáveis de ambiente:
 
 | Variável | Uso |
@@ -65,6 +67,7 @@ Variáveis de ambiente:
 | `PORT` | Porta do servidor (padrão 3000). |
 | `DATA_DIR` | Pasta onde fica o banco `db.json` (padrão `./data`). **Faça backup dessa pasta.** |
 | `NODE_ENV=production` | Ativa cookie seguro (exige HTTPS). |
+| `DEMO=1` | Carrega uma empresa de exemplo quando o banco está vazio (para visualização). |
 | `TRUST_PROXY=1` | Use quando o app estiver atrás de proxy/balanceador. |
 
 ## Estrutura

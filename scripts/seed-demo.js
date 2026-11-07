@@ -5,6 +5,7 @@
  */
 const store = require('../lib/store');
 const { allItems } = require('../lib/questionnaire');
+function seedDemo() {
 const db = store.load();
 
 const sectors = [{ name: 'Produção', headcount: 30 }, { name: 'Administrativo', headcount: 15 }, { name: 'Comercial', headcount: 12 }, { name: 'Logística', headcount: 4 }];
@@ -45,3 +46,7 @@ for (const [sector, n] of Object.entries(counts)) {
 }
 store.save();
 console.log(`Dados de demonstração criados: "${company.name}" com ${Object.values(counts).reduce((a, b) => a + b)} respostas.`);
+}
+
+module.exports = seedDemo;
+if (require.main === module) seedDemo();

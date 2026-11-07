@@ -20,6 +20,8 @@ app.use((req, res, next) => {
 });
 
 const db = store.load();
+// Modo demonstração: carrega uma empresa de exemplo quando o banco está vazio
+if (process.env.DEMO && db.companies.length === 0) require('./scripts/seed-demo')();
 const save = store.save;
 const SESSION_DAYS = 14;
 
