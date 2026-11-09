@@ -3,7 +3,8 @@
   const { esc, md, slides, api, toast, fmtDate, dateChip } = window.MC;
   const root = document.getElementById('root');
   const S = { user: null, catalog: null };
-  const ORIGIN = location.origin;
+  const LINK = MC.link;
+  const go = h => MC.go(h);
 
   /* ------------------------------ Ícones ------------------------------ */
   const ICONS = {
@@ -35,10 +36,16 @@
     return { el: bg.querySelector('.modal-body'), close };
   }
   const formData = form => Object.fromEntries(new FormData(form).entries());
-  const confirmBox = msg => window.confirm(msg);
-  const copy = async text => { try { await navigator.clipboard.writeText(text); toast('Link copiado!'); } catch { prompt('Copie o link:', text); } };
-  const qrImg = text => `<div class="qr"><img alt="QR Code" src="/api/qr?text=${encodeURIComponent(text)}"></div>`;
-  const linkBox = url => `<div class="linkbox"><code>${esc(url)}</code><button class="btn sm ghost" data-copy="${esc(url)}">Copiar</button><a class="btn sm ghost" href="${esc(url)}" target="_blank" rel="noopener">Abrir</a></div>`;
+  const confirmBox = msg => new Promise(resolve => {
+    const m = modal('Confirmar', `<p>${esc(msg)}</p><div class="btns" style="margin-top:16px"><button class="btn danger" id="yes">Confirmar</button><button class="btn ghost" id="no">Cancelar</button></div>`);
+    m.el.querySelector('#yes').onclick = () => { m.close(); resolve(true); };
+    m.el.querySelector('#no').onclick = () => { m.close(); resolve(false); };
+  });
+  const copy = async text => { try { await navigator.clipboard.writeText(text); toast('Link copiado!'); } catch { toast('Selecione o link e copie manualmente', true); } };
+  const qrImg = text => `<div class="qr"><img alt="QR Code" src="${MC.qr(text)}"></div>`;
+  const linkBox = url => MC.standalone
+    ? `<div class="linkbox"><code>Na versão publicada aqui aparece o link para enviar aos colaboradores.</code><a class="btn sm" href="${esc(url)}">Ver como colaborador</a></div>`
+    : `<div class="linkbox"><code>${esc(url)}</code><button class="btn sm ghost" data-copy="${esc(url)}">Copiar</button><a class="btn sm ghost" href="${esc(url)}" target="_blank" rel="noopener">Abrir</a></div>`;
   document.addEventListener('click', e => { const b = e.target.closest('[data-copy]'); if (b) copy(b.dataset.copy); });
 
   /* ------------------------------ Shell ------------------------------- */
@@ -50,17 +57,20 @@
     root.innerHTML = `
       <div class="app">
         <aside class="sidebar" id="sb">
-          <div class="brand"><img src="/img/logo.png" alt="MindCorp – Saúde Mental Organizacional"></div>
+          <div class="brand"><img src="${MC.logo}" alt="MindCorp – Saúde Mental Organizacional"></div>
           <nav class="nav">${nav.map(([h, i, l]) => `<a href="${h}" class="${active === h ? 'active' : ''}">${icon(i)}${l}</a>`).join('')}</nav>
-          <div class="foot"><div><b>${esc(S.user.name)}</b></div><div class="muted">${S.user.crp ? 'CRP ' + esc(S.user.crp) : esc(S.user.email)}</div><a href="#" id="logout" class="small">Sair</a></div>
+          <div class="foot"><div><b>${esc(S.user.name)}</b></div><div class="muted">${S.user.crp ? 'CRP ' + esc(S.user.crp) : esc(S.user.email)}</div>${MC.standalone ? '<a href="#" id="reset" class="small">Restaurar dados de exemplo</a>' : '<a href="#" id="logout" class="small">Sair</a>'}</div>
         </aside>
         <div class="main">
           <div class="topbar"><button class="menu-btn" id="mb" aria-label="Menu"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none" stroke-width="2">${ICONS.menu}</svg></button>
-            <div class="tag">Ciência. Estratégia. <span>Cuidado.</span></div><div class="who">Saúde mental estratégica para organizações mais inteligentes</div></div>
+            <div class="tag">Ciência. Estratégia. <span>Cuidado.</span></div>${MC.standalone ? '<div class="demo-pill">Demonstração<span class="long"> · dados salvos só neste navegador</span></div>' : ''}<div class="who">Saúde mental estratégica para organizações mais inteligentes</div></div>
           <div class="content" id="content">${content}</div>
         </div>
       </div>`;
-    document.getElementById('logout').onclick = async e => { e.preventDefault(); await api('/api/logout', { method: 'POST' }); S.user = null; location.hash = '#/'; boot(); };
+    const rs = document.getElementById('reset');
+    if (rs) rs.onclick = async e => { e.preventDefault(); if (await confirmBox('Apagar o que você alterou e voltar aos dados de exemplo?')) MC.resetDemo(); };
+    const lo = document.getElementById('logout');
+    if (lo) lo.onclick = async e => { e.preventDefault(); await api('/api/logout', { method: 'POST' }); S.user = null; go('#/'); boot(); };
     document.getElementById('mb').onclick = () => document.getElementById('sb').classList.toggle('open');
     return document.getElementById('content');
   }
@@ -81,7 +91,7 @@
         </div>
         <div class="auth-form">
           <form id="f">
-            <img src="/img/logo.png" alt="MindCorp">
+            <img src="${MC.logo}" alt="MindCorp">
             <h2>${setup ? 'Primeiro acesso' : 'Entrar'}</h2>
             <p class="muted small">${setup ? 'Crie a conta da consultora responsável.' : 'Acesso restrito à equipe MindCorp.'}</p>
             ${setup ? `<div class="field"><label>Nome completo</label><input name="name" required></div>
@@ -123,6 +133,10 @@
         </div>
       </div>`;
   }
+  const printBtn = tip => MC.standalone
+    ? '<span class="muted small">Na versão instalada do app, aqui fica o botão <b>Imprimir / Salvar em PDF</b>.</span>'
+    : `<button class="btn" data-print>Imprimir / Salvar em PDF</button>${tip ? '<span class="muted small">Dica: no diálogo de impressão escolha "Salvar como PDF" e ative "Gráficos de plano de fundo".</span>' : ''}`;
+  document.addEventListener('click', e => { if (e.target.closest('[data-print]')) window.print(); });
   const empty = (i, t) => `<div class="empty">${icon(i)}<div>${esc(t)}</div></div>`;
   const svcName = id => S.catalog?.services.find(s => s.id === id)?.name || 'Serviço';
 
@@ -135,7 +149,7 @@
       <div class="card">${list.length ? `<div class="table-wrap"><table><thead><tr><th>Empresa</th><th>Segmento</th><th>Colaboradores</th><th>Serviços</th><th>Avaliações</th><th>Status</th></tr></thead><tbody>
         ${list.map(x => `<tr class="click" data-id="${x.id}"><td><b>${esc(x.name)}</b><div class="muted small">${esc(x.cnpj || '')}</div></td><td>${esc(x.segment || '—')}</td><td>${esc(x.employees || '—')}</td><td>${x.stats.deliveriesDone}/${x.stats.deliveries}</td><td>${x.stats.campaigns} <span class="muted small">(${x.stats.responses} resp.)</span></td><td><span class="badge ${x.status === 'ativa' ? 'ok' : 'off'}">${esc(x.status)}</span></td></tr>`).join('')}
       </tbody></table></div>` : empty('building', 'Cadastre a primeira empresa para começar.')}</div>`;
-    c.querySelectorAll('tr[data-id]').forEach(tr => tr.onclick = () => location.hash = `#/empresas/${tr.dataset.id}`);
+    c.querySelectorAll('tr[data-id]').forEach(tr => tr.onclick = () => go(`#/empresas/${tr.dataset.id}`));
     c.querySelector('#new').onclick = () => companyForm();
     if (q.get('nova')) companyForm();
   }
@@ -172,7 +186,7 @@
       try {
         const r = await api(co.id ? `/api/companies/${co.id}` : '/api/companies', { method: co.id ? 'PUT' : 'POST', body });
         m.close(); toast('Empresa salva');
-        location.hash = `#/empresas/${r.id}`; route();
+        go(`#/empresas/${r.id}`); route();
       } catch (err) { toast(err.message, true); }
     };
   }
@@ -180,7 +194,7 @@
   async function pageCompany(id, tab = 'resumo') {
     const c = shell('#/empresas', '<p class="muted">Carregando…</p>');
     const [co, deliveries, campaigns, materials] = await Promise.all([api(`/api/companies/${id}`), api(`/api/deliveries?companyId=${id}`), api(`/api/campaigns?companyId=${id}`), api('/api/materials')]);
-    const portalUrl = `${ORIGIN}/p/${co.portalToken}`;
+    const portalUrl = LINK('/p/' + co.portalToken);
     const tabs = [['resumo', 'Resumo'], ['servicos', 'Serviços'], ['avaliacoes', 'Avaliações NR-1'], ['materiais', 'Materiais publicados'], ['portal', 'Portal do colaborador']];
     let body = '';
     if (tab === 'resumo') {
@@ -211,8 +225,8 @@
       <div class="tabs">${tabs.map(([k, l]) => `<a href="#/empresas/${id}/${k}" class="${tab === k ? 'active' : ''}">${l}</a>`).join('')}</div>${body}`;
     c.querySelector('#edit').onclick = () => companyForm(co);
     c.querySelector('#del').onclick = async () => {
-      if (!confirmBox(`Excluir "${co.name}" e TODOS os seus serviços, avaliações e respostas? Esta ação não pode ser desfeita.`)) return;
-      await api(`/api/companies/${id}`, { method: 'DELETE' }); toast('Empresa excluída'); location.hash = '#/empresas';
+      if (!await confirmBox(`Excluir "${co.name}" e TODOS os seus serviços, avaliações e respostas? Esta ação não pode ser desfeita.`)) return;
+      await api(`/api/companies/${id}`, { method: 'DELETE' }); toast('Empresa excluída'); go('#/empresas');
     };
     const nd = c.querySelector('#nd'); if (nd) nd.onclick = () => deliveryForm({ companyId: id });
     const nc = c.querySelector('#nc'); if (nc) nc.onclick = () => campaignForm({ companyId: id });
@@ -223,20 +237,20 @@
       await api(`/api/companies/${id}`, { method: 'PUT', body: { publishedMaterials: ids } }); toast('Materiais publicados no portal');
     };
     const rg = c.querySelector('#regen');
-    if (rg) rg.onclick = async () => { if (confirmBox('Gerar novo link? O link atual deixará de funcionar.')) { await api(`/api/companies/${id}/regenerate-link`, { method: 'POST' }); route(); } };
+    if (rg) rg.onclick = async () => { if (await confirmBox('Gerar novo link? O link atual deixará de funcionar.')) { await api(`/api/companies/${id}/regenerate-link`, { method: 'POST' }); route(); } };
   }
 
   /* -------------------------- Cartaz (QR) ----------------------------- */
   async function pagePoster(id) {
     const co = await api(`/api/companies/${id}`);
-    const url = `${ORIGIN}/p/${co.portalToken}`;
+    const url = LINK('/p/' + co.portalToken);
     const c = shell('#/empresas', '');
-    c.innerHTML = `<div class="report-toolbar btns no-print"><a class="btn ghost" href="#/empresas/${id}/portal">← Voltar</a><button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button></div>
+    c.innerHTML = `<div class="report-toolbar btns no-print"><a class="btn ghost" href="#/empresas/${id}/portal">← Voltar</a>${printBtn()}</div>
       <div class="report"><section class="cover" style="text-align:center;padding:56px 36px">
-        <div class="logo"><img src="/img/logo.png" alt="MindCorp"></div>
+        <div class="logo"><img src="${MC.logo}" alt="MindCorp"></div>
         <h1 style="font-size:2.2rem;text-transform:uppercase">Cuidar da mente<br>também é <span style="color:var(--teal)">trabalho em equipe</span></h1>
         <p class="meta" style="font-size:1.1rem">${esc(co.name)} e MindCorp convidam você a acessar o<br><b style="color:#fff">Portal do Colaborador</b></p>
-        <div style="background:#fff;display:inline-block;padding:16px;border-radius:16px;margin:16px 0"><img src="/api/qr?text=${encodeURIComponent(url)}" style="width:260px;height:260px;display:block" alt="QR Code"></div>
+        <div style="background:#fff;display:inline-block;padding:16px;border-radius:16px;margin:16px 0"><img src="${MC.qr(url)}" style="width:260px;height:260px;display:block" alt="QR Code"></div>
         <p class="meta">Aponte a câmera do celular para o QR Code<br><small>${esc(url)}</small></p>
         <div class="grid g3" style="margin-top:28px;text-align:left;color:#fff">
           <div><b class="accent">Materiais</b><br><small class="meta">Cartilhas e exercícios sobre saúde mental</small></div>
@@ -263,7 +277,7 @@
     c.querySelectorAll('[data-fb]').forEach(b => b.onclick = () => feedbackModal(b.dataset.fb, b.dataset.token));
   }
   async function feedbackModal(id, token) {
-    const url = `${ORIGIN}/feedback/${token}`;
+    const url = LINK('/feedback/' + token);
     const fb = await api(`/api/deliveries/${id}/feedback`);
     const avg = fb.length ? (fb.reduce((s, f) => s + f.rating, 0) / fb.length).toFixed(1) : '—';
     modal('Avaliação de satisfação', `<p class="muted">Ao final do serviço, mostre o QR Code ou envie o link para os participantes avaliarem (anônimo). O serviço precisa estar marcado como <b>Realizado</b>.</p>
@@ -295,7 +309,7 @@
       catch (err) { toast(err.message, true); }
     };
     const dd = m.el.querySelector('#dd');
-    if (dd) dd.onclick = async () => { if (confirmBox('Excluir este serviço?')) { await api(`/api/deliveries/${d.id}`, { method: 'DELETE' }); m.close(); route(); } };
+    if (dd) dd.onclick = async () => { if (await confirmBox('Excluir este serviço?')) { await api(`/api/deliveries/${d.id}`, { method: 'DELETE' }); m.close(); route(); } };
   }
 
   async function pageAgenda(q) {
@@ -310,7 +324,7 @@
       <div class="card" style="margin-bottom:18px"><div class="row"><div><label>Empresa</label><select id="fco"><option value="">Todas</option>${companies.map(x => `<option value="${x.id}" ${x.id === fCo ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
       <div><label>Status</label><select id="fst"><option value="">Todos</option>${Object.entries(STATUS).map(([k, [l]]) => `<option value="${k}" ${k === fSt ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div></div>
       ${Object.keys(byMonth).length ? Object.keys(byMonth).sort().map(k => `<div class="card"><h3>${monthLabel(k)}</h3>${deliveryList(byMonth[k], true, companies)}</div>`).join('') : `<div class="card">${empty('calendar', 'Nenhum serviço encontrado.')}</div>`}`;
-    const upd = () => { const p = new URLSearchParams(); if (c.querySelector('#fco').value) p.set('empresa', c.querySelector('#fco').value); if (c.querySelector('#fst').value) p.set('status', c.querySelector('#fst').value); location.hash = '#/agenda' + (p.toString() ? '?' + p : ''); };
+    const upd = () => { const p = new URLSearchParams(); if (c.querySelector('#fco').value) p.set('empresa', c.querySelector('#fco').value); if (c.querySelector('#fst').value) p.set('status', c.querySelector('#fst').value); go('#/agenda' + (p.toString() ? '?' + p : '')); };
     c.querySelector('#fco').onchange = upd; c.querySelector('#fst').onchange = upd;
     c.querySelector('#nd').onclick = () => deliveryForm({ companyId: fCo });
     bindDeliveryList(c);
@@ -326,7 +340,7 @@
     c.innerHTML = `<div class="page-head"><div><h1>Materiais e palestras</h1><p class="muted">Conteúdos digitais para aplicar com os colaboradores. Publique-os no portal de cada empresa.</p></div><button class="btn" id="nm">+ Novo material</button></div>
       <div class="tabs"><a href="#/materiais" class="${!cat ? 'active' : ''}">Todos (${list.length})</a>${CATEGORIES.map(x => { const n = list.filter(m => m.category === x).length; return n ? `<a href="#/materiais?cat=${encodeURIComponent(x)}" class="${cat === x ? 'active' : ''}">${x} (${n})</a>` : ''; }).join('')}</div>
       <div class="grid g3">${shown.map(m => `<div class="card mat-card" data-id="${m.id}"><span class="upper cat">${esc(m.category)} · ${esc(m.audience || '')}</span><h3>${esc(m.title)}</h3><p>${esc(m.summary || '')}</p><div>${m.builtin ? '<span class="badge">Padrão MindCorp</span>' : '<span class="badge ok">Personalizado</span>'}</div></div>`).join('')}</div>`;
-    c.querySelectorAll('.mat-card').forEach(el => el.onclick = () => location.hash = `#/materiais/${el.dataset.id}`);
+    c.querySelectorAll('.mat-card').forEach(el => el.onclick = () => go(`#/materiais/${el.dataset.id}`));
     c.querySelector('#nm').onclick = () => materialForm();
   }
 
@@ -341,7 +355,7 @@
       <div class="btns"><button class="btn">Salvar</button></div></form>`, { wide: true });
     mm.el.querySelector('#mf').onsubmit = async e => {
       e.preventDefault();
-      try { const r = await api(m.id ? `/api/materials/${m.id}` : '/api/materials', { method: m.id ? 'PUT' : 'POST', body: formData(e.target) }); mm.close(); toast('Material salvo'); location.hash = `#/materiais/${r.id}`; route(); }
+      try { const r = await api(m.id ? `/api/materials/${m.id}` : '/api/materials', { method: m.id ? 'PUT' : 'POST', body: formData(e.target) }); mm.close(); toast('Material salvo'); go(`#/materiais/${r.id}`); route(); }
       catch (err) { toast(err.message, true); }
     };
   }
@@ -357,9 +371,9 @@
       <div class="card md" style="max-width:820px">${m.summary ? `<p class="muted"><i>${esc(m.summary)}</i></p>` : ''}${m.videoUrl ? `<p><a href="${esc(m.videoUrl)}" target="_blank" rel="noopener">▶ Assistir ao vídeo</a></p>` : ''}
         ${isTalk ? slides(m.body).map((s, i) => `<div style="border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:12px"><span class="upper muted">Slide ${i + 1}</span>${s.html}${s.notes ? `<blockquote>Nota: ${esc(s.notes)}</blockquote>` : ''}</div>`).join('') : md(m.body)}</div>`;
     if (isTalk) c.querySelector('#present').onclick = () => present(m);
-    c.querySelector('#dup').onclick = async () => { const r = await api('/api/materials', { method: 'POST', body: { ...m, title: m.title + ' (cópia)' } }); toast('Cópia criada'); location.hash = `#/materiais/${r.id}`; };
+    c.querySelector('#dup').onclick = async () => { const r = await api('/api/materials', { method: 'POST', body: { ...m, title: m.title + ' (cópia)' } }); toast('Cópia criada'); go(`#/materiais/${r.id}`); };
     const ed = c.querySelector('#ed'); if (ed) ed.onclick = () => materialForm(m);
-    const del = c.querySelector('#del'); if (del) del.onclick = async () => { if (confirmBox('Excluir este material?')) { await api(`/api/materials/${id}`, { method: 'DELETE' }); location.hash = '#/materiais'; } };
+    const del = c.querySelector('#del'); if (del) del.onclick = async () => { if (await confirmBox('Excluir este material?')) { await api(`/api/materials/${id}`, { method: 'DELETE' }); go('#/materiais'); } };
     c.querySelector('#pub').onclick = async () => {
       const companies = await api('/api/companies');
       const mm = modal('Publicar no portal do colaborador', companies.length ? `${companies.map(co => `<label class="check"><input type="checkbox" value="${co.id}" ${co.publishedMaterials.includes(id) ? 'checked' : ''}> ${esc(co.name)}</label>`).join('')}<div class="btns" style="margin-top:14px"><button class="btn" id="sv">Salvar</button></div>` : '<p class="muted">Cadastre uma empresa primeiro.</p>');
@@ -382,7 +396,7 @@
     el.className = 'present';
     const draw = () => {
       el.innerHTML = `<div class="slide md">${ss[i].html}</div>${ss[i].notes ? `<div class="notes">Nota: ${esc(ss[i].notes)}</div>` : ''}
-        <div class="bar-b"><img src="/img/logo.png" alt="MindCorp"><span>${i + 1} / ${ss.length}</span><div class="btns"><button class="btn sm" data-a="-1">←</button><button class="btn sm" data-a="1">→</button><button class="btn sm" data-a="x">Sair (Esc)</button></div></div>`;
+        <div class="bar-b"><img src="${MC.logo}" alt="MindCorp"><span>${i + 1} / ${ss.length}</span><div class="btns"><button class="btn sm" data-a="-1">←</button><button class="btn sm" data-a="1">→</button><button class="btn sm" data-a="x">Sair (Esc)</button></div></div>`;
       el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => act(b.dataset.a));
     };
     const act = a => { if (a === 'x') { el.remove(); document.removeEventListener('keydown', key); if (document.fullscreenElement) document.exitFullscreen(); return; } i = Math.max(0, Math.min(ss.length - 1, i + Number(a))); draw(); };
@@ -402,7 +416,7 @@
       <div class="btns"><button class="btn teal">Criar e gerar link</button></div></form>`);
     m.el.querySelector('#af').onsubmit = async e => {
       e.preventDefault();
-      try { const r = await api('/api/campaigns', { method: 'POST', body: formData(e.target) }); m.close(); location.hash = `#/avaliacoes/${r.id}`; }
+      try { const r = await api('/api/campaigns', { method: 'POST', body: formData(e.target) }); m.close(); go(`#/avaliacoes/${r.id}`); }
       catch (err) { toast(err.message, true); }
     };
   }
@@ -420,12 +434,12 @@
     const c = shell('#/avaliacoes', '<p class="muted">Carregando…</p>');
     const r = await api(`/api/campaigns/${id}/report`);
     const a = r.campaignData, co = r.companyData;
-    const url = `${ORIGIN}/pesquisa/${a.token}`;
+    const url = LINK('/pesquisa/' + a.token);
     const tabs = [['coleta', 'Coleta de respostas'], ['analise', 'Análise e matriz de risco'], ['plano', 'Plano de ação e conclusões']];
     let body = '';
     if (tab === 'coleta') {
       body = `<div class="grid g2"><div class="card"><h2>Link da pesquisa</h2><p class="muted">Envie por WhatsApp, e-mail, intranet ou exiba o QR Code em reuniões. A pesquisa também aparece no Portal do Colaborador.</p>${linkBox(url)}
-          <div class="btns" style="margin-top:12px"><button class="btn ${a.status === 'aberta' ? 'danger' : 'teal'}" id="toggle">${a.status === 'aberta' ? 'Encerrar coleta' : 'Reabrir coleta'}</button><a class="btn ghost" href="${esc(url)}" target="_blank">Pré-visualizar</a></div>
+          <div class="btns" style="margin-top:12px"><button class="btn ${a.status === 'aberta' ? 'danger' : 'teal'}" id="toggle">${a.status === 'aberta' ? 'Encerrar coleta' : 'Reabrir coleta'}</button><a class="btn ghost" href="${esc(url)}" target="_blank">Ver como colaborador</a></div>
           <hr><form id="sf"><div class="row"><div class="field"><label>Título</label><input name="title" value="${esc(a.title)}"></div></div>
           <div class="row"><div class="field"><label>Início</label><input type="date" name="startDate" value="${esc(a.startDate)}"></div><div class="field"><label>Término</label><input type="date" name="endDate" value="${esc(a.endDate)}"></div><div class="field"><label>Grupo mínimo</label><input type="number" name="minGroup" min="3" value="${esc(a.minGroup)}"></div></div>
           <div class="field"><label>Setores exibidos na pesquisa</label>${co.sectors.length ? co.sectors.map(s => `<label class="check"><input type="checkbox" class="sec" value="${esc(s.name)}" ${a.sectors.includes(s.name) ? 'checked' : ''}> ${esc(s.name)}</label>`).join('') : '<p class="muted small">Cadastre setores na empresa para análise por área.</p>'}</div>
@@ -481,7 +495,7 @@
     c.innerHTML = `<div class="page-head"><div><a href="#/empresas/${co.id}/avaliacoes" class="small">← ${esc(co.name)}</a><h1>${esc(a.title)}</h1><p class="muted"><span class="badge ${a.status === 'aberta' ? 'ok' : 'off'}">${esc(a.status)}</span> ${r.totalResponses} respostas</p></div>
       <div class="btns"><a class="btn teal" href="#/relatorio/${id}">Relatório para a empresa</a><button class="btn danger" id="del">Excluir</button></div></div>
       <div class="tabs">${tabs.map(([k, l]) => `<a href="#/avaliacoes/${id}/${k}" class="${tab === k ? 'active' : ''}">${l}</a>`).join('')}</div>${body}`;
-    c.querySelector('#del').onclick = async () => { if (confirmBox('Excluir esta avaliação e todas as respostas?')) { await api(`/api/campaigns/${id}`, { method: 'DELETE' }); location.hash = '#/avaliacoes'; } };
+    c.querySelector('#del').onclick = async () => { if (await confirmBox('Excluir esta avaliação e todas as respostas?')) { await api(`/api/campaigns/${id}`, { method: 'DELETE' }); go('#/avaliacoes'); } };
     const tg = c.querySelector('#toggle');
     if (tg) tg.onclick = async () => { await api(`/api/campaigns/${id}`, { method: 'PUT', body: { status: a.status === 'aberta' ? 'encerrada' : 'aberta' } }); route(); };
     const sf = c.querySelector('#sf');
@@ -523,10 +537,10 @@
     };
 
     c.innerHTML = `
-      <div class="report-toolbar btns no-print"><a class="btn ghost" href="#/avaliacoes/${id}">← Voltar</a><button class="btn" onclick="window.print()">Imprimir / Salvar em PDF</button><span class="muted small">Dica: no diálogo de impressão escolha "Salvar como PDF" e ative "Gráficos de plano de fundo".</span></div>
+      <div class="report-toolbar btns no-print"><a class="btn ghost" href="#/avaliacoes/${id}">← Voltar</a>${printBtn(true)}</div>
       <div class="report">
         <section class="cover">
-          <div class="logo"><img src="/img/logo.png" alt="MindCorp"></div>
+          <div class="logo"><img src="${MC.logo}" alt="MindCorp"></div>
           <h1>Relatório de Avaliação de Fatores de Riscos Psicossociais Relacionados ao Trabalho</h1>
           <p class="meta">NR-1 – Gerenciamento de Riscos Ocupacionais (GRO) · Subsídio ao Inventário de Riscos e Plano de Ação do PGR</p>
           <table style="color:#fff;margin-top:18px;max-width:620px"><tbody>
@@ -643,7 +657,7 @@
   async function route() {
     if (!S.user) return boot();
     if (!S.catalog) S.catalog = await api('/api/catalog');
-    const [path, qs] = location.hash.replace(/^#/, '').split('?');
+    const [path, qs] = MC.current().replace(/^#/, '').split('?');
     const q = new URLSearchParams(qs || '');
     const p = (path || '/').split('/').filter(Boolean);
     window.scrollTo(0, 0);
@@ -670,6 +684,7 @@
     authScreen(s.needsSetup);
   }
 
-  window.addEventListener('hashchange', () => { document.querySelector('.modal-bg')?.remove(); route(); });
+  MC.onNavigate(() => { document.querySelector('.modal-bg')?.remove(); document.getElementById('sb')?.classList.remove('open'); route(); });
+  MC.route = route;
   boot();
 })();

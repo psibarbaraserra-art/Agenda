@@ -66,5 +66,43 @@
     return `<div class="date-chip"><b>${day}</b><span>${MONTHS[+m - 1]}</span></div>`;
   }
 
-  window.MC = { esc, md, slides, api, toast, fmtDate, dateChip, MONTHS };
+  /* ---- Navegação e recursos: servidor (padrão) ou demonstração sem servidor ---- */
+  const standalone = !!window.MC_STANDALONE;
+  let current = '#/';
+  const listeners = [];
+  const go = h => {
+    if (!standalone) { location.hash = h; return; }
+    current = h;
+    listeners.forEach(fn => fn());
+  };
+  const link = path => (standalone ? '#!' + path : location.origin + path);
+  function qr(text) {
+    if (!standalone) return '/api/qr?text=' + encodeURIComponent(text);
+    try {
+      const q = window.qrcode(0, 'M');
+      q.addData(text.startsWith('#!') ? 'MindCorp demonstração: na versão publicada este QR Code abre o portal do colaborador.' : text);
+      q.make();
+      return q.createDataURL(6, 4);
+    } catch { return ''; }
+  }
+  if (standalone) {
+    // Links internos (#/…) navegam no painel; links "#!…" abrem a visão do colaborador
+    document.addEventListener('click', e => {
+      const a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      const href = a.getAttribute('href');
+      if (href === '#') return;
+      e.preventDefault();
+      if (href.startsWith('#!')) window.MC.openPortal(href.slice(2));
+      else go(href);
+    });
+  }
+
+  window.MC = {
+    esc, md, slides, api, toast, fmtDate, dateChip, MONTHS,
+    standalone, go, link, qr,
+    logo: window.MC_LOGO || '/img/logo.png',
+    current: () => (standalone ? current : location.hash),
+    onNavigate: fn => (standalone ? listeners.push(fn) : window.addEventListener('hashchange', fn))
+  };
 })();

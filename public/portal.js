@@ -1,8 +1,9 @@
 /* MindCorp – Portal do Colaborador (público, anônimo) */
 (function () {
   const { esc, md, api, toast, fmtDate } = window.MC;
-  const root = document.getElementById('root');
-  const parts = location.pathname.split('/').filter(Boolean);
+function runPortal(path, root) {
+  const parts = path.split('/').filter(Boolean);
+  const L = MC.link;
   const setCompany = n => { document.getElementById('co').textContent = n || ''; };
   const storage = {
     get: k => { try { return localStorage.getItem(k); } catch { return null; } },
@@ -17,9 +18,9 @@
     document.title = `Portal do Colaborador · ${d.company.name}`;
     root.innerHTML = `
       <div class="p-hero"><h1>Olá! Este espaço é para você.</h1><p>A ${esc(d.company.name)}, em parceria com a MindCorp, preparou conteúdos e ações para cuidar da sua saúde mental no trabalho.</p></div>
-      ${d.campaigns.map(c => `<a class="p-cta" href="/pesquisa/${c.token}">📝 ${esc(c.title)}<small>Pesquisa anônima · cerca de 7 minutos${c.endDate ? ' · até ' + fmtDate(c.endDate) : ''}</small></a>`).join('')}
-      ${d.events.filter(e => e.feedbackToken).map(e => `<a class="p-cta" style="background:var(--petrol)" href="/feedback/${e.feedbackToken}">⭐ Avalie: ${esc(e.title)}<small>${fmtDate(e.date)} · leva 1 minuto</small></a>`).join('')}
-      ${d.materials.length ? `<h2 style="margin-top:20px">Materiais para você</h2><div class="grid g2">${d.materials.map(m => `<a class="card mat-card" style="text-decoration:none;color:inherit" href="/p/${token}/m/${m.id}"><span class="upper cat">${esc(m.category)}</span><h3>${esc(m.title)}</h3><p>${esc(m.summary || '')}</p></a>`).join('')}</div>` : ''}
+      ${d.campaigns.map(c => `<a class="p-cta" href="${L('/pesquisa/' + c.token)}">📝 ${esc(c.title)}<small>Pesquisa anônima · cerca de 7 minutos${c.endDate ? ' · até ' + fmtDate(c.endDate) : ''}</small></a>`).join('')}
+      ${d.events.filter(e => e.feedbackToken).map(e => `<a class="p-cta" style="background:var(--petrol)" href="${L('/feedback/' + e.feedbackToken)}">⭐ Avalie: ${esc(e.title)}<small>${fmtDate(e.date)} · leva 1 minuto</small></a>`).join('')}
+      ${d.materials.length ? `<h2 style="margin-top:20px">Materiais para você</h2><div class="grid g2">${d.materials.map(m => `<a class="card mat-card" style="text-decoration:none;color:inherit" href="${L('/p/' + token + '/m/' + m.id)}"><span class="upper cat">${esc(m.category)}</span><h3>${esc(m.title)}</h3><p>${esc(m.summary || '')}</p></a>`).join('')}</div>` : ''}
       ${d.events.filter(e => e.status === 'planejado').length ? `<h2 style="margin-top:24px">Próximas ações</h2><div class="card">${d.events.filter(e => e.status === 'planejado').map(e => `<div class="list-item"><div style="display:flex;gap:12px;align-items:center">${MC.dateChip(e.date)}<div><b>${esc(e.title)}</b><div class="muted small">${esc([e.time, e.modality, e.location].filter(Boolean).join(' · '))}</div></div></div></div>`).join('')}</div>` : ''}
       <h2 style="margin-top:24px">Onde buscar apoio</h2>
       <div class="card">${d.company.supportChannels ? `<p>${esc(d.company.supportChannels).replace(/\n/g, '<br>')}</p>` : ''}<p class="small"><b>CVV – Centro de Valorização da Vida:</b> 188 (24h, gratuito) · cvv.org.br<br><b>SAMU:</b> 192 · <b>Central de Atendimento à Mulher:</b> 180</p></div>`;
@@ -31,7 +32,7 @@
     document.title = `${m.title} · MindCorp`;
     const isTalk = m.category === 'Palestra';
     const body = isTalk ? MC.slides(m.body).map(s => `<div style="border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:10px">${s.html}</div>`).join('') : md(m.body);
-    root.innerHTML = `<a href="/p/${token}" class="small">← Voltar ao portal</a>
+    root.innerHTML = `<a href="${L('/p/' + token)}" class="small">← Voltar ao portal</a>
       <div class="card md" style="margin-top:10px"><span class="upper accent">${esc(m.category)}</span><h1>${esc(m.title)}</h1>${m.summary ? `<p class="muted">${esc(m.summary)}</p>` : ''}${m.videoUrl ? `<p><a class="btn" href="${esc(m.videoUrl)}" target="_blank" rel="noopener">▶ Assistir ao vídeo</a></p>` : ''}${body}</div>`;
   }
 
@@ -132,4 +133,7 @@
       fail('Página não encontrada.');
     } catch (err) { fail(err.message); }
   })();
+}
+  window.MC.runPortal = runPortal;
+  if (!MC.standalone) runPortal(location.pathname, document.getElementById('root'));
 })();

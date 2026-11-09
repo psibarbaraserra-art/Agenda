@@ -50,6 +50,11 @@ npm run demo         # depois: npm start
 
 Testes do cálculo de risco: `npm test`.
 
+### Versão de demonstração em um único arquivo
+`npm run build:demo` gera `dist/mindcorp-demo.html`: o app completo rodando só no navegador, sem servidor,
+com uma empresa de exemplo. Os dados ficam guardados apenas naquele navegador. Serve para conhecer o app
+e mostrar a clientes; para uso real com colaboradores, publique o servidor (abaixo).
+
 ## Como publicar na internet
 
 Os colaboradores precisam acessar o portal pela internet, então o app deve ficar hospedado em um servidor. Opções simples:
@@ -77,10 +82,12 @@ server.js              API e rotas (Express)
 lib/questionnaire.js   Questionário NR-1: dimensões, itens, severidade, perigos, agravos e medidas
 lib/report.js          Cálculo de pontuação, probabilidade, matriz de risco e anonimato
 lib/content.js         Catálogo de serviços, cartilhas e roteiros de palestra
+lib/api.js             Regras e rotas da API (usadas pelo servidor e pela demonstração)
 lib/store.js           Banco de dados em arquivo JSON
 public/                Painel da consultora (index.html, app.js) e portal do colaborador (portal.html, portal.js)
 public/img/            Logo e ícone MindCorp
 scripts/seed-demo.js   Dados de demonstração
+scripts/build-standalone.js  Gera a demonstração em arquivo único (dist/)
 test/                  Testes automatizados
 ```
 

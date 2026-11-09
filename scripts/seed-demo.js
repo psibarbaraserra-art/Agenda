@@ -3,9 +3,9 @@
  * Cria dados de demonstração (empresa fictícia, serviços e 48 respostas simuladas).
  * Uso: npm run demo   (não apaga dados existentes)
  */
-const store = require('../lib/store');
 const { allItems } = require('../lib/questionnaire');
-function seedDemo() {
+function seedDemo(st) {
+const store = st || require('../lib/store');
 const db = store.load();
 
 const sectors = [{ name: 'Produção', headcount: 30 }, { name: 'Administrativo', headcount: 15 }, { name: 'Comercial', headcount: 12 }, { name: 'Logística', headcount: 4 }];
@@ -45,7 +45,7 @@ for (const [sector, n] of Object.entries(counts)) {
   }
 }
 store.save();
-console.log(`Dados de demonstração criados: "${company.name}" com ${Object.values(counts).reduce((a, b) => a + b)} respostas.`);
+if (typeof process !== 'undefined' && process.stdout) console.log(`Dados de demonstração criados: "${company.name}" com ${Object.values(counts).reduce((a, b) => a + b)} respostas.`);
 }
 
 module.exports = seedDemo;
