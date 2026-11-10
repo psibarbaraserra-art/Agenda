@@ -13,6 +13,7 @@
     calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     book: '<path d="M4 4h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z"/><path d="M20 4h-6a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h7z"/>',
     chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
     shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     menu: '<path d="M3 6h18M3 12h18M3 18h18"/>'
@@ -43,16 +44,17 @@
   });
   const copy = async text => { try { await navigator.clipboard.writeText(text); toast('Link copiado!'); } catch { toast('Selecione o link e copie manualmente', true); } };
   const qrImg = text => `<div class="qr"><img alt="QR Code" src="${MC.qr(text)}"></div>`;
-  const linkBox = url => MC.standalone
-    ? `<div class="linkbox"><code>Na versão publicada aqui aparece o link para enviar aos colaboradores.</code><a class="btn sm" href="${esc(url)}">Ver como colaborador</a></div>`
+  const linkBox = (url, label = 'Ver como colaborador') => MC.standalone
+    ? `<div class="linkbox"><code>Na versão publicada aqui aparece o link para enviar aos colaboradores.</code><a class="btn sm" href="${esc(url)}">${label}</a></div>`
     : `<div class="linkbox"><code>${esc(url)}</code><button class="btn sm ghost" data-copy="${esc(url)}">Copiar</button><a class="btn sm ghost" href="${esc(url)}" target="_blank" rel="noopener">Abrir</a></div>`;
   document.addEventListener('click', e => { const b = e.target.closest('[data-copy]'); if (b) copy(b.dataset.copy); });
 
   /* ------------------------------ Shell ------------------------------- */
   function shell(active, content) {
+    document.body.classList.remove('pf');
     const nav = [
       ['#/', 'home', 'Início'], ['#/empresas', 'building', 'Empresas'], ['#/agenda', 'calendar', 'Agenda de serviços'],
-      ['#/materiais', 'book', 'Materiais e palestras'], ['#/avaliacoes', 'chart', 'Avaliações NR-1'], ['#/metodologia', 'shield', 'Metodologia'], ['#/perfil', 'user', 'Meu perfil']
+      ['#/materiais', 'book', 'Materiais e palestras'], ['#/avaliacoes', 'chart', 'Avaliações NR-1'], ['#/portfolio', 'briefcase', 'Portfólio'], ['#/metodologia', 'shield', 'Metodologia'], ['#/perfil', 'user', 'Meu perfil']
     ];
     root.innerHTML = `
       <div class="app">
@@ -221,8 +223,12 @@
     }
     c.innerHTML = `
       <div class="page-head"><div><a href="#/empresas" class="small">← Empresas</a><h1>${esc(co.name)}</h1><p class="muted">${esc(co.segment || '')}</p></div>
-        <div class="btns"><button class="btn ghost" id="edit">Editar</button><button class="btn danger" id="del">Excluir</button></div></div>
+        <div class="btns"><button class="btn teal" id="pfsend">Enviar portfólio</button><button class="btn ghost" id="edit">Editar</button><button class="btn danger" id="del">Excluir</button></div></div>
       <div class="tabs">${tabs.map(([k, l]) => `<a href="#/empresas/${id}/${k}" class="${tab === k ? 'active' : ''}">${l}</a>`).join('')}</div>${body}`;
+    c.querySelector('#pfsend').onclick = () => {
+      const u = LINK('/portfolio?para=' + encodeURIComponent(co.name));
+      modal('Portfólio para ' + co.name, `<p class="muted">Envie este link ao contato da empresa. A página abre com o nome "${esc(co.name)}". O conteúdo é editado em <a href="#/portfolio">Portfólio</a>.</p>${linkBox(u, 'Ver portfólio')}`);
+    };
     c.querySelector('#edit').onclick = () => companyForm(co);
     c.querySelector('#del').onclick = async () => {
       if (!await confirmBox(`Excluir "${co.name}" e TODOS os seus serviços, avaliações e respostas? Esta ação não pode ser desfeita.`)) return;
@@ -635,6 +641,75 @@
       <div class="card"><h2>Catálogo de serviços</h2><table><tbody>${S.catalog.services.map(s => `<tr><td><b>${esc(s.name)}</b><div class="small muted">${esc(s.group)}</div></td><td class="small">${esc(s.description)}</td></tr>`).join('')}</tbody></table></div>`;
   }
 
+  /* ----------------------------- Portfólio ---------------------------- */
+  async function pagePortfolio() {
+    const c = shell('#/portfolio', '<p class="muted">Carregando…</p>');
+    const [pf, companies] = await Promise.all([api('/api/portfolio'), api('/api/companies')]);
+    const url = LINK('/portfolio');
+    const groups = [...new Set(S.catalog.services.map(x => x.group))];
+    const sel = new Set(pf.services);
+    let photo = pf.photo || '';
+    c.innerHTML = `<div class="page-head"><div><h1>Portfólio</h1><p class="muted">Apresentação da MindCorp para enviar às empresas por link. Edite o conteúdo e salve.</p></div>
+        <div class="btns"><a class="btn teal" href="${esc(url)}" target="_blank" rel="noopener">Ver portfólio</a></div></div>
+      <div class="grid g2" style="align-items:start">
+        <div class="card"><h2>Link para enviar</h2><p class="muted small">Envie por WhatsApp, e-mail ou LinkedIn. Quem abrir não precisa de login.</p>${linkBox(url, 'Ver portfólio')}
+          <h3 style="margin-top:18px">Link personalizado para uma empresa</h3><p class="muted small">A página abre com "Apresentação preparada para…" e o nome da empresa.</p>
+          <div class="row"><div class="field"><label for="pfor">Nome da empresa</label><input id="pfor" list="pcos" placeholder="Ex.: Indústria Alfa"><datalist id="pcos">${companies.map(x => `<option value="${esc(x.name)}">`).join('')}</datalist></div></div>
+          <div id="plink"></div></div>
+        <div class="card" style="display:flex;flex-direction:column;align-items:center;gap:10px">${qrImg(url)}<span class="muted small">QR Code do portfólio (para cartões, slides e eventos)</span></div>
+      </div>
+      <form id="pff">
+        <div class="card"><h2>Apresentação</h2>
+          <div class="field"><label for="pf-h">Título principal</label><input id="pf-h" name="headline" value="${esc(pf.headline)}"></div>
+          <div class="field"><label for="pf-s">Subtítulo</label><input id="pf-s" name="subheadline" value="${esc(pf.subheadline)}"></div>
+          <div class="field"><label for="pf-a">Quem somos</label><textarea id="pf-a" name="about">${esc(pf.about)}</textarea></div></div>
+        <div class="card"><h2>Responsável técnica</h2><p class="muted small">Nome e CRP vêm de <a href="#/perfil">Meu perfil</a> (${esc(S.user.name)}${S.user.crp ? ' · CRP ' + esc(S.user.crp) : ''}).</p>
+          <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:14px"><img id="pf-img" alt="Foto" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid var(--mist);${photo ? '' : 'display:none'}" src="${esc(photo)}">
+            <div class="btns"><label class="btn ghost" for="pf-file" style="margin:0">Escolher foto</label><input id="pf-file" type="file" accept="image/*" hidden><button type="button" class="btn ghost" id="pf-rm" ${photo ? '' : 'hidden'}>Remover foto</button></div></div>
+          <div class="field"><label for="pf-b">Mini currículo</label><textarea id="pf-b" name="bio" placeholder="Formação, especializações, experiência em saúde do trabalhador, empresas atendidas…">${esc(pf.bio)}</textarea></div></div>
+        <div class="card"><h2>Serviços exibidos</h2>${groups.map(g => `<h3 style="margin-top:12px">${esc(g)}</h3>${S.catalog.services.filter(x => x.group === g).map(x => `<label class="check"><input type="checkbox" class="pf-svc" value="${x.id}" ${sel.has(x.id) ? 'checked' : ''}> <span>${esc(x.name)} <span class="muted small">· ${esc(x.description)}</span></span></label>`).join('')}`).join('')}</div>
+        <div class="card"><h2>Palestras</h2>
+          <label class="check"><input type="checkbox" id="pf-talks" ${pf.showTalks ? 'checked' : ''}> Mostrar as palestras da biblioteca de materiais</label>
+          <div class="field" style="margin-top:12px"><label for="pf-x">Outros temas (um por linha)</label><textarea id="pf-x" name="extraTopics" placeholder="Inteligência emocional&#10;Gestão do tempo e produtividade saudável">${esc(pf.extraTopics)}</textarea></div></div>
+        <div class="card"><h2>Contato</h2>
+          <div class="row"><div class="field"><label for="pf-w">WhatsApp (com DDD)</label><input id="pf-w" name="whatsapp" value="${esc(pf.whatsapp)}" placeholder="(11) 99999-9999"></div><div class="field"><label for="pf-p">Telefone</label><input id="pf-p" name="phone" value="${esc(pf.phone)}"></div></div>
+          <div class="row"><div class="field"><label for="pf-e">E-mail</label><input id="pf-e" name="email" type="email" value="${esc(pf.email)}"></div><div class="field"><label for="pf-i">Instagram</label><input id="pf-i" name="instagram" value="${esc(pf.instagram)}" placeholder="@mindcorp"></div></div>
+          <div class="row"><div class="field"><label for="pf-site">Site</label><input id="pf-site" name="website" value="${esc(pf.website)}"></div><div class="field"><label for="pf-c">Região de atendimento</label><input id="pf-c" name="city" value="${esc(pf.city)}" placeholder="São Paulo e região · on-line para todo o Brasil"></div></div>
+          <p class="hint">Com o WhatsApp preenchido, o portfólio ganha o botão "Agendar uma conversa".</p></div>
+        <div class="btns" style="margin-top:18px"><button class="btn">Salvar portfólio</button><a class="btn ghost" href="${esc(url)}" target="_blank" rel="noopener">Ver portfólio</a></div>
+      </form>`;
+    const pl = c.querySelector('#plink');
+    const updLink = () => { const n = c.querySelector('#pfor').value.trim(); pl.innerHTML = n ? linkBox(LINK('/portfolio?para=' + encodeURIComponent(n)), 'Ver portfólio') : ''; };
+    c.querySelector('#pfor').oninput = updLink;
+    const img = c.querySelector('#pf-img'), rm = c.querySelector('#pf-rm');
+    c.querySelector('#pf-file').onchange = e => {
+      const f = e.target.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        const im = new Image();
+        im.onload = () => {
+          const k = Math.min(1, 480 / Math.max(im.width, im.height));
+          const cv = document.createElement('canvas'); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k);
+          cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+          photo = cv.toDataURL('image/jpeg', 0.85);
+          img.src = photo; img.style.display = ''; rm.hidden = false;
+        };
+        im.onerror = () => toast('Não foi possível ler esta imagem', true);
+        im.src = r.result;
+      };
+      r.readAsDataURL(f);
+    };
+    rm.onclick = () => { photo = ''; img.style.display = 'none'; rm.hidden = true; };
+    c.querySelector('#pff').onsubmit = async e => {
+      e.preventDefault();
+      const body = formData(e.target);
+      body.services = [...c.querySelectorAll('.pf-svc:checked')].map(i => i.value);
+      body.showTalks = c.querySelector('#pf-talks').checked;
+      body.photo = photo;
+      try { await api('/api/portfolio', { method: 'PUT', body }); toast('Portfólio salvo'); } catch (err) { toast(err.message, true); }
+    };
+  }
+
   /* ------------------------------ Perfil ------------------------------ */
   function pageProfile() {
     const c = shell('#/perfil', '');
@@ -670,6 +745,7 @@
       if (p[0] === 'avaliacoes') return p[1] ? await pageCampaign(p[1], p[2]) : await pageCampaigns(q);
       if (p[0] === 'relatorio') return await pageReport(p[1]);
       if (p[0] === 'metodologia') return pageMethod();
+      if (p[0] === 'portfolio') return await pagePortfolio();
       if (p[0] === 'perfil') return pageProfile();
       await pageHome();
     } catch (err) {

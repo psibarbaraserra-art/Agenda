@@ -15,6 +15,7 @@ digitais aos colaboradores e devolver à empresa o **relatório de avaliação d
 | **Avaliação de satisfação** | Cada serviço tem um link/QR Code para os participantes avaliarem (nota, utilidade e comentário, anônimo). |
 | **Materiais e palestras** | 11 cartilhas/guias prontos (NR-1, estresse, burnout, ansiedade, sono, assédio, CNV, equilíbrio, guia para líderes, Setembro Amarelo, pausa de 3 minutos) e 4 roteiros de palestra com **modo apresentação** em tela cheia. Você pode criar, duplicar e editar os seus. |
 | **Portal do Colaborador** | Um link + QR Code por empresa (sem login). O colaborador acessa os materiais publicados, responde à pesquisa NR-1 e avalia as palestras pelo celular. Inclui cartaz pronto para imprimir. |
+| **Portfólio** | Página de apresentação da MindCorp para enviar às empresas por link (`/portfolio`), editável no painel: textos, serviços, temas de palestras, foto, mini currículo e contatos (com botão de WhatsApp). Gera link personalizado por empresa (`/portfolio?para=Nome`) e QR Code. |
 | **Avaliação NR-1** | Questionário digital **anônimo** (34 afirmações, 11 dimensões), termo de consentimento (LGPD), resposta por setor, acompanhamento de adesão em tempo real. |
 | **Análise e matriz de risco** | Probabilidade calculada pelas respostas × severidade ajustável pela psicóloga = nível de risco (Baixo, Moderado, Alto, Crítico). |
 | **Plano de ação** | Sugestão automática de medidas para riscos moderados ou maiores; responsável, prazo e status. |

@@ -70,8 +70,9 @@ const bootstrap = `
 
   /* Visão do colaborador (portal) dentro da mesma página */
   MC.openPortal = p => {
+    const open = document.querySelector('.modal-bg'); if (open) open.remove();
     const root = document.getElementById('root');
-    root.innerHTML = '<div class="portal-back"><div class="p-wrap"><span>Você está vendo o que o colaborador vê no celular.</span><button id="pb" type="button">← Voltar ao painel</button></div></div>'
+    root.innerHTML = '<div class="portal-back"><div class="p-wrap"><span>' + (p.indexOf('/portfolio') === 0 ? 'Você está vendo o portfólio como a empresa vê ao abrir o link.' : 'Você está vendo o que o colaborador vê no celular.') + '</span><button id="pb" type="button">← Voltar ao painel</button></div></div>'
       + '<header class="p-head"><div class="p-wrap"><img src="' + MC.logo + '" alt="MindCorp – Saúde Mental Organizacional" class="p-logo"><span id="co" class="p-co"></span></div></header>'
       + '<div class="p-band"><div class="p-wrap">Ciência. Estratégia. <span>Cuidado.</span></div></div>'
       + '<main class="p-wrap" id="proot"><p class="muted">Carregando…</p></main>'

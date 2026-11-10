@@ -80,7 +80,7 @@ app.all('/api/*', async (req, res) => {
 /* -------------------------------- Estáticos -------------------------------- */
 const PUB = path.join(__dirname, 'public');
 app.use(express.static(PUB, { index: false }));
-['/p/:token', '/p/:token/*', '/pesquisa/:token', '/feedback/:token'].forEach(r => app.get(r, (req, res) => res.sendFile(path.join(PUB, 'portal.html'))));
+['/portfolio', '/p/:token', '/p/:token/*', '/pesquisa/:token', '/feedback/:token'].forEach(r => app.get(r, (req, res) => res.sendFile(path.join(PUB, 'portal.html'))));
 app.get('*', (req, res) => res.sendFile(path.join(PUB, 'index.html')));
 
 if (require.main === module) {

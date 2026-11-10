@@ -1,8 +1,12 @@
 /* MindCorp – Portal do Colaborador (público, anônimo) */
 (function () {
   const { esc, md, api, toast, fmtDate } = window.MC;
-function runPortal(path, root) {
+function runPortal(fullPath, root) {
+  const [path, qs] = String(fullPath).split('?');
+  const query = new URLSearchParams(qs || '');
   const parts = path.split('/').filter(Boolean);
+  root.classList.toggle('pf-root', parts[0] === 'portfolio');
+  document.body.classList.toggle('pf', parts[0] === 'portfolio');
   const L = MC.link;
   const setCompany = n => { document.getElementById('co').textContent = n || ''; };
   const storage = {
@@ -95,6 +99,115 @@ function runPortal(path, root) {
     draw();
   }
 
+  /* ----------------------------- Portfólio ---------------------------- */
+  async function portfolioPage() {
+    const d = await api('/api/public/portfolio');
+    const para = (query.get('para') || '').trim().slice(0, 80);
+    setCompany(para ? 'Para ' + para : '');
+    document.title = para ? `MindCorp · Proposta para ${para}` : 'MindCorp · Portfólio';
+    const help = document.querySelector('.p-foot small'); if (help) help.remove();
+    const digits = String(d.whatsapp || '').replace(/\D/g, '');
+    const wa = digits ? 'https://wa.me/' + (digits.length <= 11 ? '55' + digits : digits) + '?text=' + encodeURIComponent(`Olá! Vi o portfólio da MindCorp${para ? ' (' + para + ')' : ''} e gostaria de agendar uma conversa.`) : '';
+    const insta = String(d.instagram || '').replace(/^@/, '').trim();
+    const site = String(d.website || '').trim();
+    const siteUrl = site && !/^https?:\/\//.test(site) ? 'https://' + site : site;
+    const groups = [...new Set(d.services.map(s => s.group))];
+    const steps = [
+      ['Conversa inicial', 'Entendemos a realidade da empresa, setores, indicadores (afastamentos, rotatividade) e objetivos.'],
+      ['Pesquisa digital anônima', 'Os colaboradores respondem pelo celular, por link ou QR Code, em cerca de 7 minutos, com sigilo garantido.'],
+      ['Análise e matriz de risco', 'Cada fator psicossocial é classificado por probabilidade e severidade, geral e por setor.'],
+      ['Devolutiva e plano de ação', 'Apresentamos os resultados à liderança e definimos medidas, responsáveis e prazos para o PGR.'],
+      ['Ações de cuidado', 'Palestras, treinamentos de lideranças, rodas de conversa e acolhimento psicológico.'],
+      ['Monitoramento', 'Acompanhamos a eficácia das medidas e reavaliamos periodicamente, conforme o ciclo do GRO.']
+    ];
+    const deliverables = [
+      ['Relatório técnico assinado', 'Avaliação dos fatores de risco psicossociais com metodologia, resultados e conclusões da psicóloga responsável.'],
+      ['Inventário de riscos para o PGR', 'Fatores, perigos, possíveis agravos, nível de risco e prioridade, prontos para o SESMT incluir no programa.'],
+      ['Plano de ação', 'Medidas de prevenção com responsáveis e prazos, priorizadas pelo nível de risco.'],
+      ['Portal do Colaborador', 'Link exclusivo da empresa com cartilhas, exercícios, agenda das ações e canais de apoio.'],
+      ['Indicadores de participação', 'Adesão por setor e avaliação de satisfação de cada palestra e ação realizada.']
+    ];
+    const pillars = [
+      ['Ciência que orienta', 'Decisões baseadas em evidências.'],
+      ['Estratégia que transforma', 'Soluções personalizadas para cada organização.'],
+      ['Cuidado que acolhe', 'Acolhimento, empatia e escuta qualificada.'],
+      ['Resultados que geram impacto', 'Ambientes saudáveis, produtivos e sustentáveis.']
+    ];
+    const talks = [...d.talks.map(t => ({ title: t.title.replace(/^Palestra:\s*/i, ''), sub: t.summary, aud: t.audience })), ...d.extraTopics.map(t => ({ title: t }))];
+    const c = d.consultant;
+    root.innerHTML = `
+      <section class="pf-hero">
+        ${para ? `<span class="pf-for">Apresentação preparada para <b>${esc(para)}</b></span>` : ''}
+        <h1>${esc(d.headline)}</h1>
+        <p class="pf-sub">${esc(d.subheadline)}</p>
+        <p class="pf-tag">Ciência. Estratégia. <span>Cuidado.</span></p>
+        ${wa ? `<a class="btn teal pf-btn" href="${esc(wa)}" target="_blank" rel="noopener">Agendar uma conversa pelo WhatsApp</a>` : ''}
+      </section>
+
+      <section class="pf-sec pf-about">
+        <div><span class="upper accent">Quem somos</span><h2>Saúde mental organizacional</h2><p>${esc(d.about)}</p></div>
+        <div class="pf-pillars">${pillars.map(([t, x]) => `<div><b>${t}</b><small>${x}</small></div>`).join('')}</div>
+      </section>
+
+      <section class="pf-sec pf-nr1">
+        <span class="upper accent">Por que agora</span>
+        <h2>A NR-1 inclui a saúde mental na gestão de riscos</h2>
+        <p>Com a atualização da Norma Regulamentadora nº 1 (Portaria MTE nº 1.419/2024), as empresas passaram a ter de identificar, avaliar e controlar os <b>fatores de risco psicossociais relacionados ao trabalho</b> dentro do Gerenciamento de Riscos Ocupacionais (GRO) e do PGR.</p>
+        <div class="pf-facts">
+          <div><b>Obrigação legal</b><small>Os riscos psicossociais devem constar do inventário de riscos e do plano de ação do PGR.</small></div>
+          <div><b>Saúde e afastamentos</b><small>Transtornos mentais estão entre as principais causas de afastamento do trabalho no Brasil.</small></div>
+          <div><b>Clima e produtividade</b><small>Sobrecarga, falta de apoio e assédio afetam engajamento, retenção e segurança.</small></div>
+        </div>
+      </section>
+
+      ${d.services.length ? `<section class="pf-sec">
+        <span class="upper accent">Serviços</span><h2>O que oferecemos</h2>
+        <div class="pf-groups">${groups.map(g => `<div class="pf-group"><h3>${esc(g)}</h3>${d.services.filter(s => s.group === g).map(s => `<div class="pf-svc"><b>${esc(s.name)}</b><small>${esc(s.description)}</small></div>`).join('')}</div>`).join('')}</div>
+      </section>` : ''}
+
+      <section class="pf-sec">
+        <span class="upper accent">Metodologia</span><h2>Como funciona a avaliação psicossocial</h2>
+        <ol class="pf-steps">${steps.map(([t, x]) => `<li><b>${t}</b><small>${x}</small></li>`).join('')}</ol>
+      </section>
+
+      <section class="pf-sec">
+        <span class="upper accent">Entregas</span><h2>O que a empresa recebe</h2>
+        <div class="pf-deliv">${deliverables.map(([t, x]) => `<div><b>${t}</b><small>${x}</small></div>`).join('')}</div>
+      </section>
+
+      ${talks.length ? `<section class="pf-sec">
+        <span class="upper accent">Palestras e treinamentos</span><h2>Temas disponíveis</h2>
+        <div class="pf-talks">${talks.map(t => `<div><b>${esc(t.title)}</b>${t.sub ? `<small>${esc(t.sub)}</small>` : ''}${t.aud ? `<span class="badge">${esc(t.aud)}</span>` : ''}</div>`).join('')}</div>
+      </section>` : ''}
+
+      <section class="pf-sec pf-ethics">
+        <span class="upper accent">Sigilo e ética</span><h2>Cuidado com as pessoas e com os dados</h2>
+        <ul>
+          <li>Pesquisa <b>anônima</b>: não coletamos nome, e-mail, matrícula ou IP.</li>
+          <li>Resultados apresentados apenas em grupo, nunca individualmente.</li>
+          <li>Conformidade com a LGPD (Lei 13.709/2018) e com o Código de Ética Profissional do Psicólogo.</li>
+          <li>Foco na organização do trabalho, não na avaliação de pessoas.</li>
+        </ul>
+      </section>
+
+      ${c ? `<section class="pf-sec pf-who">
+        ${d.photo ? `<img src="${esc(d.photo)}" alt="${esc(c.name)}">` : ''}
+        <div><span class="upper accent">Responsável técnica</span><h2>${esc(c.name)}</h2>${c.crp ? `<p class="muted">Psicóloga · CRP ${esc(c.crp)}</p>` : ''}${d.bio ? d.bio.split(/\n+/).map(x => `<p>${esc(x)}</p>`).join('') : ''}</div>
+      </section>` : ''}
+
+      <section class="pf-contact">
+        <h2>Vamos conversar sobre a saúde mental da sua equipe?</h2>
+        <div class="pf-cgrid">
+          ${wa ? `<a class="btn teal" href="${esc(wa)}" target="_blank" rel="noopener">WhatsApp ${esc(d.whatsapp)}</a>` : ''}
+          ${d.phone ? `<div><small>Telefone</small><b>${esc(d.phone)}</b></div>` : ''}
+          ${d.email ? `<div><small>E-mail</small><b class="sel">${esc(d.email)}</b></div>` : ''}
+          ${insta ? `<div><small>Instagram</small><a href="https://instagram.com/${encodeURIComponent(insta)}" target="_blank" rel="noopener">@${esc(insta)}</a></div>` : ''}
+          ${siteUrl ? `<div><small>Site</small><a href="${esc(siteUrl)}" target="_blank" rel="noopener">${esc(site)}</a></div>` : ''}
+          ${d.city ? `<div><small>Atendimento</small><b>${esc(d.city)}</b></div>` : ''}
+        </div>
+      </section>`;
+  }
+
   /* ------------------------------ Feedback ---------------------------- */
   async function feedback(token) {
     const d = await api(`/api/public/feedback/${token}`);
@@ -126,6 +239,7 @@ function runPortal(path, root) {
 
   (async () => {
     try {
+      if (parts[0] === 'portfolio') return await portfolioPage();
       if (parts[0] === 'p' && parts[2] === 'm') return await material(parts[1], parts[3]);
       if (parts[0] === 'p') return await portal(parts[1]);
       if (parts[0] === 'pesquisa') return await survey(parts[1]);
@@ -135,5 +249,5 @@ function runPortal(path, root) {
   })();
 }
   window.MC.runPortal = runPortal;
-  if (!MC.standalone) runPortal(location.pathname, document.getElementById('root'));
+  if (!MC.standalone) runPortal(location.pathname + location.search, document.getElementById('root'));
 })();

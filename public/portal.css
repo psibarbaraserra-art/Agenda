@@ -37,3 +37,49 @@ main.p-wrap { padding-top: 24px; padding-bottom: 40px; min-height: 60vh; }
   .p-logo { height: 36px; }
   .p-co { font-size: .8rem; }
 }
+
+/* ---------- Portfólio ---------- */
+main.pf-root { max-width: 1080px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+body.pf .p-wrap { max-width: 1080px; }
+.pf-hero { background: linear-gradient(140deg, var(--navy) 0%, var(--petrol) 100%); color: var(--white); border-radius: 18px; padding: clamp(28px, 6vw, 64px); display: grid; gap: 14px; justify-items: start; }
+.pf-hero h1 { color: var(--white); font-size: clamp(1.7rem, 4.4vw, 2.9rem); text-transform: uppercase; letter-spacing: .01em; max-width: 20ch; text-wrap: balance; margin: 0; }
+.pf-sub { color: var(--mist); font-size: clamp(1rem, 2vw, 1.2rem); margin: 0; max-width: 46ch; }
+.pf-tag { margin: 0; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; font-size: .85rem; }
+.pf-tag span { color: var(--teal); }
+.pf-for { background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .25); border-radius: 99px; padding: 5px 14px; font-size: .85rem; }
+.pf-btn { margin-top: 8px; }
+.pf-sec { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: clamp(22px, 4vw, 40px); }
+.pf-sec h2 { font-size: clamp(1.25rem, 2.6vw, 1.6rem); text-wrap: balance; margin: 4px 0 14px; }
+.pf-sec p { max-width: 68ch; }
+.pf-about { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; align-items: center; }
+.pf-pillars, .pf-facts, .pf-deliv, .pf-talks { display: grid; gap: 12px; }
+.pf-pillars div, .pf-facts div, .pf-deliv div, .pf-talks div, .pf-svc { border-left: 3px solid var(--teal); padding: 4px 0 4px 12px; display: grid; gap: 2px; }
+.pf-pillars b { text-transform: uppercase; font-size: .82rem; letter-spacing: .05em; }
+.pf-root small { color: var(--muted); }
+.pf-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 16px; }
+.pf-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 28px; }
+.pf-group { display: grid; gap: 10px; align-content: start; }
+.pf-group h3 { color: var(--petrol); margin: 0; font-size: .95rem; text-transform: uppercase; letter-spacing: .05em; }
+.pf-steps { list-style: none; counter-reset: s; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.pf-steps li { counter-increment: s; background: var(--ice); border-radius: 12px; padding: 16px; display: grid; gap: 4px; align-content: start; }
+.pf-steps li::before { content: counter(s); width: 30px; height: 30px; border-radius: 50%; background: var(--navy); color: var(--white); display: grid; place-items: center; font-weight: 700; font-size: .9rem; margin-bottom: 4px; }
+.pf-deliv { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 28px; }
+.pf-talks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 28px; }
+.pf-talks .badge { justify-self: start; margin-top: 4px; }
+.pf-ethics ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.pf-ethics li::marker { color: var(--teal); }
+.pf-who { display: flex; gap: 24px; align-items: center; }
+.pf-who img { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; border: 4px solid var(--mist); flex: none; }
+.pf-who > div { min-width: 0; }
+.pf-contact { background: var(--navy); color: var(--white); border-radius: 18px; padding: clamp(24px, 5vw, 48px); display: grid; gap: 18px; }
+.pf-contact h2 { color: var(--white); margin: 0; font-size: clamp(1.3rem, 3vw, 1.8rem); text-wrap: balance; }
+.pf-cgrid { display: flex; flex-wrap: wrap; gap: 14px 32px; align-items: center; }
+.pf-cgrid div { display: grid; gap: 2px; }
+.pf-cgrid small { color: var(--mist); text-transform: uppercase; font-size: .7rem; letter-spacing: .08em; }
+.pf-cgrid a:not(.btn) { color: var(--white); font-weight: 600; }
+.pf-cgrid .sel { user-select: all; }
+@media (max-width: 760px) {
+  .pf-about, .pf-facts, .pf-groups, .pf-deliv, .pf-talks { grid-template-columns: 1fr; }
+  .pf-steps { grid-template-columns: 1fr; }
+  .pf-who { flex-direction: column; align-items: flex-start; }
+}
