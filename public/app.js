@@ -13,6 +13,7 @@
     calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     book: '<path d="M4 4h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z"/><path d="M20 4h-6a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h7z"/>',
     chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    save: '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/>',
     briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
     shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
@@ -54,7 +55,7 @@
     document.body.classList.remove('pf');
     const nav = [
       ['#/', 'home', 'Início'], ['#/empresas', 'building', 'Empresas'], ['#/agenda', 'calendar', 'Agenda de serviços'],
-      ['#/materiais', 'book', 'Materiais e palestras'], ['#/avaliacoes', 'chart', 'Avaliações NR-1'], ['#/portfolio', 'briefcase', 'Portfólio'], ['#/metodologia', 'shield', 'Metodologia'], ['#/perfil', 'user', 'Meu perfil']
+      ['#/materiais', 'book', 'Materiais e palestras'], ['#/avaliacoes', 'chart', 'Avaliações NR-1'], ['#/portfolio', 'briefcase', 'Portfólio'], ['#/metodologia', 'shield', 'Metodologia'], ['#/backup', 'save', 'Cópia de segurança'], ['#/perfil', 'user', 'Meu perfil']
     ];
     root.innerHTML = `
       <div class="app">
@@ -120,6 +121,7 @@
     c.innerHTML = `
       <div class="page-head"><div><h1>Olá, ${esc(S.user.name.split(' ')[0])}</h1><p class="muted">Visão geral dos seus atendimentos e avaliações.</p></div>
         <div class="btns"><a class="btn ghost" href="#/empresas?nova=1">+ Empresa</a><a class="btn ghost" href="#/agenda?novo=1">+ Serviço</a><a class="btn teal" href="#/avaliacoes?nova=1">+ Avaliação NR-1</a></div></div>
+      ${backupReminder(d)}
       <div class="grid g4">
         <div class="stat hl"><div class="v">${d.companies}</div><div class="l">Empresas atendidas</div></div>
         <div class="stat"><div class="v">${d.deliveriesDone}</div><div class="l">Serviços realizados</div></div>
@@ -710,6 +712,81 @@
     };
   }
 
+  /* ------------------------- Cópia de segurança ------------------------ */
+  const pl = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const daysSince = iso => iso ? Math.floor((Date.now() - new Date(iso)) / 864e5) : null;
+  function backupReminder(d) {
+    if (MC.standalone || !d.companies) return '';
+    const n = daysSince(d.lastBackupAt);
+    if (n !== null && n < 7) return '';
+    return `<div class="card" style="margin-bottom:18px;border-left:4px solid var(--r-moderado);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div><b>${n === null ? 'Você ainda não baixou uma cópia de segurança.' : `Sua última cópia de segurança foi há ${n} dias.`}</b><div class="muted small">Guarde uma cópia dos dados no seu computador pelo menos uma vez por semana.</div></div>
+      <a class="btn" href="#/backup">Fazer cópia agora</a></div>`;
+  }
+  async function downloadBackup() {
+    const data = await api('/api/backup');
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `mindcorp-copia-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    return data;
+  }
+  async function pageBackup() {
+    const c = shell('#/backup', '<p class="muted">Carregando…</p>');
+    const d = await api('/api/dashboard');
+    const n = daysSince(d.lastBackupAt);
+    c.innerHTML = `<div class="page-head"><div><h1>Cópia de segurança</h1><p class="muted">Guarde no seu computador uma cópia de todos os dados do app e restaure se algo der errado.</p></div></div>
+      ${MC.standalone ? '<div class="card" style="margin-bottom:18px;border-left:4px solid var(--teal)"><b>Na demonstração do chat não é possível baixar arquivos.</b><div class="muted small">Esta tela funciona na versão publicada do app (Render).</div></div>' : ''}
+      <div class="grid g2" style="align-items:start">
+        <div class="card"><h2>Baixar cópia</h2>
+          <p>Gera um arquivo com empresas, serviços, materiais, avaliações, respostas, portfólio e login. O arquivo vai para a pasta <b>Downloads</b> do seu computador.</p>
+          <p class="small ${n === null || n >= 7 ? '' : 'muted'}">${d.lastBackupAt ? `Última cópia: <b>${fmtDate(d.lastBackupAt)}</b> (${n === 0 ? 'hoje' : n === 1 ? 'ontem' : `há ${n} dias`}).` : 'Nenhuma cópia feita ainda.'}</p>
+          <button class="btn" id="bk-dl" ${MC.standalone ? 'disabled' : ''}>Baixar cópia de segurança</button>
+          <div class="hint" style="margin-top:12px">Guarde o arquivo em local seguro (ex.: Google Drive ou pendrive). Ele contém respostas das pesquisas e deve ser tratado como dado sigiloso, conforme a LGPD.</div></div>
+        <div class="card"><h2>Restaurar cópia</h2>
+          <p>Substitui <b>todos</b> os dados atuais do app pelos dados do arquivo escolhido. Use depois de uma perda de dados ou ao trocar de servidor.</p>
+          <p class="small muted">Por segurança, antes de restaurar o app baixa automaticamente uma cópia dos dados atuais.</p>
+          <label class="btn ghost" for="bk-file" style="margin:0;${MC.standalone ? 'opacity:.5;pointer-events:none' : ''}">Escolher arquivo…</label><input id="bk-file" type="file" accept=".json,application/json" hidden>
+          <div id="bk-info" style="margin-top:14px"></div></div>
+      </div>`;
+    const dl = c.querySelector('#bk-dl');
+    dl.onclick = async () => {
+      dl.disabled = true;
+      try { await downloadBackup(); toast('Cópia baixada. Confira a pasta Downloads.'); pageBackup(); }
+      catch (err) { toast(err.message, true); dl.disabled = false; }
+    };
+    c.querySelector('#bk-file').onchange = e => {
+      const f = e.target.files[0]; if (!f) return;
+      const info = c.querySelector('#bk-info');
+      const r = new FileReader();
+      r.onload = async () => {
+        let data;
+        try { data = JSON.parse(r.result); } catch { info.innerHTML = '<p style="color:var(--danger)">Este arquivo não é uma cópia de segurança válida.</p>'; return; }
+        const dd = data && data.data;
+        if (!dd || data.app !== 'mindcorp') { info.innerHTML = '<p style="color:var(--danger)">Este arquivo não foi gerado pelo app MindCorp.</p>'; return; }
+        const cnt = k => Array.isArray(dd[k]) ? dd[k].length : 0;
+        info.innerHTML = `<div class="card" style="background:var(--ice)"><b>${esc(f.name)}</b><div class="small">Cópia de ${fmtDate(data.exportedAt)} · ${pl(cnt('companies'), 'empresa', 'empresas')} · ${pl(cnt('campaigns'), 'avaliação', 'avaliações')} · ${pl(cnt('responses'), 'resposta', 'respostas')} · ${pl(cnt('deliveries'), 'serviço', 'serviços')}</div>
+          <button class="btn danger" id="bk-go" style="margin-top:12px">Restaurar esta cópia</button></div>`;
+        info.querySelector('#bk-go').onclick = async () => {
+          if (!(await confirmBox('Todos os dados atuais serão substituídos pelos dados desta cópia. Antes disso, uma cópia dos dados atuais será baixada. Continuar?'))) return;
+          try {
+            await downloadBackup();
+            const res = await api('/api/backup/restore', { method: 'POST', body: data });
+            toast(`Cópia restaurada: ${pl(res.counts.companies, 'empresa', 'empresas')} e ${pl(res.counts.responses, 'resposta', 'respostas')}`);
+            const ses = await api('/api/session');
+            S.user = ses.user;
+            if (!S.user) return boot();
+            pageBackup();
+          } catch (err) { toast(err.message, true); }
+        };
+      };
+      r.readAsText(f);
+      e.target.value = '';
+    };
+  }
+
   /* ------------------------------ Perfil ------------------------------ */
   function pageProfile() {
     const c = shell('#/perfil', '');
@@ -746,6 +823,7 @@
       if (p[0] === 'relatorio') return await pageReport(p[1]);
       if (p[0] === 'metodologia') return pageMethod();
       if (p[0] === 'portfolio') return await pagePortfolio();
+      if (p[0] === 'backup') return pageBackup();
       if (p[0] === 'perfil') return pageProfile();
       await pageHome();
     } catch (err) {
